@@ -20,12 +20,15 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 import sys
-
 import Adafruit_DHT
-
 import time
 import httplib, urllib
 import json
+
+import RPi.GPIO as GPIO
+GPIO.setmode(GPIO.BCM)
+GPIO.setup(24,GPIO.IN,pull_up_down=GPIO.PUD_DOWN)
+
 deviceId = "DsVoaF6l"
 deviceKey = "vflSf6YqL7JyBZZk" 
 def post_to_mcs(payload): 
@@ -60,8 +63,8 @@ else:
 # Try to grab a sensor reading.  Use the read_retry method which will retry up
 # to 15 times to get a sensor reading (waiting 2 seconds between each retry).
 while 1:
-	humidity, temperature = Adafruit_DHT.read_retry(sensor, pin)
-
+	humidity,temperature = Adafruit_DHT.read_retry(sensor, pin)
+	SwitchStatus=GPIO.input(24)
 # Un-comment the line below to convert the temperature to Fahrenheit.
 # temperature = temperature * 9/5.0 + 32
 
@@ -72,10 +75,19 @@ while 1:
 	if humidity is not None and temperature is not None:
     		print('Temp={0:0.1f}*  Humidity={1:0.1f}%'.format(temperature, humidity))
 		payload = {"datapoints":[{"dataChnId":"Humidity","values":{"value":humidity}},
-			{"dataChnId":"Temperature","values":{"value":temperature}}]} 
+			{"dataChnId":"Temperature","values":{"value":temperature}},
+			{"dataChnId":"SwitchStatus","values":{"value":SwitchStatus}}]} 
 		post_to_mcs(payload)
 		time.sleep(1)
-
 	else:
     		print('Failed to get reading. Try again!')
     		sys.exit(1)
+
+	if(SwitchStatus==0):
+		print('Button released')
+		post_to_mcs(payload)
+		time.sleep(1)
+	if(SwitchStatus==1):
+		print('Button pressed')
+		post_to_mcs(payload)
+		time.sleep(1)
